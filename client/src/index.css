@@ -818,22 +818,32 @@ code {
 }
 
 .chat-conversation-item {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.85rem;
+  display: flex;
+  gap: 0.75rem;
   align-items: center;
-  width: 100%;
   padding: 0.9rem;
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.85);
-  text-align: left;
-  cursor: pointer;
 }
 
 .chat-conversation-item--active {
   border-color: rgba(37, 99, 235, 0.4);
   box-shadow: 0 12px 30px rgba(37, 99, 235, 0.12);
+}
+
+.chat-conversation-item__select {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.85rem;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
 }
 
 .chat-conversation-item__avatar {
@@ -859,6 +869,23 @@ code {
 .chat-conversation-item__copy span {
   color: #64748b;
   font-size: 0.92rem;
+}
+
+.chat-conversation-item__delete {
+  border: 1px solid rgba(185, 28, 28, 0.22);
+  border-radius: 999px;
+  background: rgba(254, 242, 242, 0.95);
+  color: #991b1b;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.45rem 0.75rem;
+  white-space: nowrap;
+}
+
+.chat-conversation-item__delete:disabled {
+  opacity: 0.65;
+  cursor: wait;
 }
 
 .chat-panel {

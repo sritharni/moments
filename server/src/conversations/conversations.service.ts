@@ -85,6 +85,16 @@ export class ConversationsService {
     });
   }
 
+  async deleteConversation(userId: string, conversationId: string) {
+    await this.ensureConversationMember(conversationId, userId);
+
+    await this.prisma.conversation.delete({
+      where: { id: conversationId },
+    });
+
+    return { success: true };
+  }
+
   private buildDirectKey(firstUserId: string, secondUserId: string) {
     return [firstUserId, secondUserId].sort().join(':');
   }

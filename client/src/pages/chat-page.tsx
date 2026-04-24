@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { ChatComposer } from '@/features/chat/components/chat-composer';
 import { ChatConversationList } from '@/features/chat/components/chat-conversation-list';
 import { ChatMessageList } from '@/features/chat/components/chat-message-list';
+import { deleteConversation } from '@/features/chat/api/delete-conversation';
 import { getConversations } from '@/features/chat/api/get-conversations';
 import { useChat } from '@/features/chat/hooks/use-chat';
 import { getCurrentUser } from '@/features/auth/utils/decode-token';
@@ -47,6 +48,7 @@ export function ChatPage() {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState(initialConversationId);
   const [composerValue, setComposerValue] = useState('');
+  const [deletingConversationId, setDeletingConversationId] = useState('');
 
   const { messages, loading, sendMessage } = useChat(activeConversationId || null);
 
@@ -71,6 +73,27 @@ export function ChatPage() {
     setComposerValue('');
   }
 
+  async function handleDeleteConversation(conversationId: string) {
+    setDeletingConversationId(conversationId);
+
+    try {
+      await deleteConversation(conversationId);
+      setConversations((current) => {
+        const next = current.filter((conversation) => conversation.id !== conversationId);
+
+        setActiveConversationId((prev) =>
+          prev === conversationId ? (next[0]?.id ?? '') : prev,
+        );
+
+        return next;
+      });
+    } catch {
+      // Keep the current UI state if deletion fails.
+    } finally {
+      setDeletingConversationId('');
+    }
+  }
+
   const uiMessages = messages.map(toUiMessage);
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
 
@@ -86,6 +109,8 @@ export function ChatPage() {
           conversations={conversations}
           activeConversationId={activeConversationId}
           onSelect={setActiveConversationId}
+          onDelete={handleDeleteConversation}
+          deletingConversationId={deletingConversationId}
         />
       </aside>
 
