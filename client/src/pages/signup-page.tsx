@@ -36,7 +36,7 @@ export function SignupPage() {
 
   useEffect(() => {
     if (user) navigate('/feed', { replace: true });
-  }, []);
+  }, [navigate, user]);
 
   const [errors, setErrors] = useState<SignupErrors>({});
   const [serverError, setServerError] = useState('');
@@ -104,7 +104,18 @@ export function SignupPage() {
           ? (error.response?.data?.message ?? 'Signup failed. Please try again.')
           : 'Signup failed. Please try again.';
 
-      setServerError(Array.isArray(message) ? message.join(', ') : message);
+      const normalizedMessage = Array.isArray(message) ? message.join(', ') : message;
+
+      if (normalizedMessage.toLowerCase().includes('username is already in use')) {
+        setErrors((current) => ({
+          ...current,
+          username: 'That username is already taken.',
+        }));
+        setServerError('');
+      } else {
+        setServerError(normalizedMessage);
+      }
+
       setIsSubmitting(false);
     }
   }
@@ -128,7 +139,7 @@ export function SignupPage() {
                 onChange={(event) =>
                   setForm((current) => ({ ...current, username: event.target.value }))
                 }
-                placeholder="tharni"
+                placeholder="name"
                 autoComplete="username"
               />
               {errors.username ? (

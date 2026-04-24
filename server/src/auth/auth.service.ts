@@ -4,6 +4,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -38,11 +39,32 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(registerDto.password, 10);
 
-    const user = await this.usersService.create({
-      username: registerDto.username,
-      email: registerDto.email,
-      password: passwordHash,
-    });
+    let user;
+
+    try {
+      user = await this.usersService.create({
+        username: registerDto.username,
+        email: registerDto.email,
+        password: passwordHash,
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const target = Array.isArray(error.meta?.target) ? error.meta.target : [];
+
+        if (target.includes('username')) {
+          throw new ConflictException('Username is already in use');
+        }
+
+        if (target.includes('email')) {
+          throw new ConflictException('Email is already in use');
+        }
+      }
+
+      throw error;
+    }
 
     return this.buildAuthResponse(user.id, user.email, user.username);
   }

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useNotifications } from '@/features/notifications/context/notification-context';
 import { getNotifications } from '@/features/notifications/api/get-notifications';
+import { markAllNotificationsRead } from '@/features/notifications/api/mark-all-read';
+import { markNotificationRead } from '@/features/notifications/api/mark-read';
+import { useNotifications } from '@/features/notifications/context/notification-context';
 import type { Notification } from '@/types/notification';
 
 function notificationLabel(n: Notification) {
@@ -27,7 +29,8 @@ function notificationLink(n: Notification) {
 }
 
 export function NotificationsPage() {
-  const { notifications, addNotification, markRead, markAllRead } = useNotifications();
+  const { markSocialRead } = useNotifications();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loaded, setLoaded] = useState(false);
   const navigate = useNavigate();
 
@@ -36,16 +39,22 @@ export function NotificationsPage() {
     setLoaded(true);
     getNotifications()
       .then((data) => {
-        for (const n of data) {
-          addNotification(n);
-        }
-        markAllRead();
+        setNotifications(data);
+        markSocialRead();
+        return markAllNotificationsRead();
       })
       .catch(() => {});
-  }, [loaded, addNotification, markAllRead]);
+  }, [loaded, markSocialRead]);
 
   function handleClick(n: Notification) {
-    if (!n.read) markRead(n.id);
+    if (!n.read) {
+      setNotifications((current) =>
+        current.map((notification) =>
+          notification.id === n.id ? { ...notification, read: true } : notification,
+        ),
+      );
+      void markNotificationRead(n.id);
+    }
     void navigate(notificationLink(n));
   }
 

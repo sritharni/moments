@@ -1,9 +1,8 @@
 import { AxiosError } from 'axios';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { startConversation } from '@/features/chat/api/start-conversation';
-import { useAuth } from '@/features/auth/context/auth-context';
 import { followUser } from '@/features/users/api/follow-user';
 import { getUserPosts } from '@/features/users/api/get-user-posts';
 import { getUserProfile } from '@/features/users/api/get-user-profile';
@@ -13,7 +12,6 @@ import type { UserProfile } from '@/types/user';
 
 export function ProfilePage() {
   const { userId } = useParams<{ userId: string }>();
-  const { user: currentUser } = useAuth();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -184,6 +182,7 @@ export function ProfilePage() {
               className={`follow-button${profile.isFollowing ? ' follow-button--active' : ''}${profile.hasRequestedFollow ? ' follow-button--requested' : ''}`}
               type="button"
               disabled={isFollowPending || profile.hasRequestedFollow}
+              aria-busy={isFollowPending}
               onClick={() => void handleFollowToggle()}
             >
               {followButtonLabel()}

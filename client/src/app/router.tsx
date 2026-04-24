@@ -1,10 +1,10 @@
 import { createBrowserRouter } from 'react-router-dom';
+import { GuestOnlyRoute, LandingRedirect, ProtectedRoute } from '@/app/route-guards';
 import { LoginPage } from '@/pages/login-page';
 import { AppShell } from '@/layouts/app-shell';
 import { ChatPage } from '@/pages/chat-page';
 import { FeedPage } from '@/pages/feed-page';
 import { FollowRequestsPage } from '@/pages/follow-requests-page';
-import { HomePage } from '@/pages/home-page';
 import { NotFoundPage } from '@/pages/not-found-page';
 import { NotificationsPage } from '@/pages/notifications-page';
 import { ProfilePage } from '@/pages/profile-page';
@@ -19,39 +19,49 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <HomePage />,
+        element: <LandingRedirect />,
       },
       {
-        path: 'feed',
-        element: <FeedPage />,
+        element: <GuestOnlyRoute />,
+        children: [
+          {
+            path: 'login',
+            element: <LoginPage />,
+          },
+          {
+            path: 'signup',
+            element: <SignupPage />,
+          },
+        ],
       },
       {
-        path: 'chat',
-        element: <ChatPage />,
-      },
-      {
-        path: 'login',
-        element: <LoginPage />,
-      },
-      {
-        path: 'signup',
-        element: <SignupPage />,
-      },
-      {
-        path: 'profile/:userId',
-        element: <ProfilePage />,
-      },
-      {
-        path: 'search',
-        element: <SearchPage />,
-      },
-      {
-        path: 'follow-requests',
-        element: <FollowRequestsPage />,
-      },
-      {
-        path: 'notifications',
-        element: <NotificationsPage />,
+        element: <ProtectedRoute />,
+        children: [
+          {
+            path: 'feed',
+            element: <FeedPage />,
+          },
+          {
+            path: 'chat',
+            element: <ChatPage />,
+          },
+          {
+            path: 'profile/:userId',
+            element: <ProfilePage />,
+          },
+          {
+            path: 'search',
+            element: <SearchPage />,
+          },
+          {
+            path: 'follow-requests',
+            element: <FollowRequestsPage />,
+          },
+          {
+            path: 'notifications',
+            element: <NotificationsPage />,
+          },
+        ],
       },
     ],
   },

@@ -1,7 +1,7 @@
 import { AxiosError } from 'axios';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { login } from '@/features/auth/api/login';
 import { useAuth } from '@/features/auth/context/auth-context';
 
@@ -24,7 +24,7 @@ export function LoginPage() {
 
   useEffect(() => {
     if (user) navigate('/feed', { replace: true });
-  }, []);
+  }, [navigate, user]);
   const [errors, setErrors] = useState<LoginErrors>({});
   const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);

@@ -597,6 +597,10 @@ code {
 
 .follow-button:disabled {
   opacity: 0.7;
+  cursor: default;
+}
+
+.follow-button[aria-busy='true'] {
   cursor: wait;
 }
 
