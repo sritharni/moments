@@ -65,12 +65,12 @@ export function AppShell() {
               <NavLinkCard
                 to="/login"
                 title="Login"
-                description="Authenticate and store a JWT locally"
+                description="I hope you remember your credentials"
               />
               <NavLinkCard
                 to="/signup"
                 title="Sign up"
-                description="Register a new user against the Nest API"
+                description="Register a new user now"
               />
             </>
           )}
