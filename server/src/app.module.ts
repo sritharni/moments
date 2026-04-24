@@ -11,6 +11,7 @@ import { MessagesModule } from './messages/messages.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PostsModule } from './posts/posts.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { TestController } from './test.controller';
 import { UsersModule } from './users/users.module';
 import { UploadModule } from './upload/upload.module';
 
@@ -38,6 +39,7 @@ import { UploadModule } from './upload/upload.module';
     ChatModule,
     UploadModule,
   ],
+  controllers: [TestController],
   providers: [
     {
       provide: APP_GUARD,
