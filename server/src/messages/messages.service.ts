@@ -118,6 +118,26 @@ export class MessagesService {
     return participants.map((participant: { userId: string }) => participant.userId);
   }
 
+  async deleteMessage(userId: string, messageId: string) {
+    const message = await this.prisma.message.findUnique({
+      where: { id: messageId },
+      select: { id: true, conversationId: true },
+    });
+
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    await this.conversationsService.ensureConversationMember(
+      message.conversationId,
+      userId,
+    );
+
+    await this.prisma.message.delete({ where: { id: messageId } });
+
+    return { id: message.id, conversationId: message.conversationId };
+  }
+
   private readonly messageSelect = {
     id: true,
     conversationId: true,

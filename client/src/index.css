@@ -810,7 +810,7 @@ code {
 .chat-layout {
   display: grid;
   grid-template-columns: minmax(260px, 320px) 1fr;
-  min-height: 76vh;
+  height: 76vh;
   border: 1px solid rgba(13, 27, 42, 0.08);
   border-radius: 1.6rem;
   overflow: hidden;
@@ -911,7 +911,7 @@ code {
 .chat-panel {
   display: grid;
   grid-template-rows: auto 1fr auto;
-  min-height: 76vh;
+  min-height: 0;
   padding: 1.25rem;
 }
 
@@ -919,7 +919,11 @@ code {
   display: grid;
   gap: 0.85rem;
   padding: 0.5rem 0 1rem;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-height: 0;
+  min-width: 0;
+  scrollbar-gutter: stable;
 }
 
 .chat-bubble-row {
@@ -932,11 +936,45 @@ code {
 }
 
 .chat-bubble {
+  position: relative;
   max-width: min(36rem, 78%);
   padding: 0.9rem 1rem;
   border-radius: 1.1rem 1.1rem 1.1rem 0.3rem;
   background: rgba(241, 245, 249, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.16);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.chat-bubble__delete {
+  position: absolute;
+  top: -0.55rem;
+  right: -0.55rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(185, 28, 28, 0.22);
+  background: rgba(254, 242, 242, 0.95);
+  color: #991b1b;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  padding: 0;
+}
+
+.chat-bubble:hover .chat-bubble__delete,
+.chat-bubble__delete:focus-visible {
+  opacity: 1;
+}
+
+.chat-bubble__delete:disabled {
+  opacity: 0.7;
+  cursor: wait;
 }
 
 .chat-bubble--self {
@@ -1268,10 +1306,8 @@ code {
 
   .chat-layout {
     grid-template-columns: 1fr;
-  }
-
-  .chat-panel {
-    min-height: 60vh;
+    height: auto;
+    grid-template-rows: auto 60vh;
   }
 }
 

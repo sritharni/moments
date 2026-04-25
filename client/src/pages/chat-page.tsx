@@ -51,7 +51,9 @@ export function ChatPage() {
   const [composerValue, setComposerValue] = useState('');
   const [deletingConversationId, setDeletingConversationId] = useState('');
 
-  const { messages, loading, sendMessage } = useChat(activeConversationId || null);
+  const { messages, loading, sendMessage, deleteMessage } = useChat(
+    activeConversationId || null,
+  );
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -134,7 +136,12 @@ export function ChatPage() {
         {loading ? (
           <div className="chat-thread" />
         ) : (
-          <ChatMessageList currentUserId={currentUserId} messages={uiMessages} />
+          <ChatMessageList
+            conversationId={activeConversationId}
+            currentUserId={currentUserId}
+            messages={uiMessages}
+            onDeleteMessage={deleteMessage}
+          />
         )}
 
         <ChatComposer

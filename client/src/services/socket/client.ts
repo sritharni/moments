@@ -5,6 +5,7 @@ import type { ApiMessage } from '@/types/chat';
 
 type ServerToClientEvents = {
   'chat:message': (message: ApiMessage) => void;
+  'chat:message-deleted': (payload: { id: string; conversationId: string }) => void;
   'chat:sent': (message: ApiMessage) => void;
   'chat:joined': (payload: { conversationId: string; room: string }) => void;
   'chat:error': (payload: { message: string }) => void;

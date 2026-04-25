@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { connectSocket, disconnectSocket, socket } from '@/services/socket/client';
 import type { ApiMessage } from '@/types/chat';
+import { deleteMessage as deleteMessageRequest } from '../api/delete-message';
 import { getMessages } from '../api/get-messages';
 
 export function useChat(conversationId: string | null) {
@@ -72,9 +73,16 @@ export function useChat(conversationId: string | null) {
       });
     }
 
+    function handleDeleted(payload: { id: string; conversationId: string }) {
+      if (payload.conversationId !== activeIdRef.current) return;
+      setMessages((prev) => prev.filter((m) => m.id !== payload.id));
+    }
+
     socket.on('chat:message', handleMessage);
+    socket.on('chat:message-deleted', handleDeleted);
     return () => {
       socket.off('chat:message', handleMessage);
+      socket.off('chat:message-deleted', handleDeleted);
     };
   }, []);
 
@@ -86,5 +94,18 @@ export function useChat(conversationId: string | null) {
     [conversationId],
   );
 
-  return { messages, loading, sendMessage };
+  const deleteMessage = useCallback(async (messageId: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    try {
+      await deleteMessageRequest(messageId);
+    } catch {
+      // If the request fails, refetch to restore state
+      const id = activeIdRef.current;
+      if (!id) return;
+      const msgs = await getMessages(id);
+      if (activeIdRef.current === id) setMessages(msgs);
+    }
+  }, []);
+
+  return { messages, loading, sendMessage, deleteMessage };
 }

@@ -8,6 +8,7 @@ import {
   WebSocketServer,
   WsException,
 } from '@nestjs/websockets';
+import { Inject, forwardRef } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { NotificationType } from '@prisma/client';
 import type { Server, Socket } from 'socket.io';
@@ -43,6 +44,7 @@ export class ChatGateway
   constructor(
     private readonly jwtService: JwtService,
     private readonly conversationsService: ConversationsService,
+    @Inject(forwardRef(() => MessagesService))
     private readonly messagesService: MessagesService,
     private readonly presenceService: ChatPresenceService,
     private readonly notificationsGateway: NotificationsGateway,
@@ -152,6 +154,21 @@ export class ChatGateway
       event: 'chat:sent',
       data: message,
     };
+  }
+
+  async broadcastMessageDeleted(payload: { id: string; conversationId: string }) {
+    const recipientIds = await this.messagesService.getMessageRecipients(
+      payload.conversationId,
+    );
+    const conversationRoom = this.buildConversationRoom(payload.conversationId);
+
+    this.server.to(conversationRoom).emit('chat:message-deleted', payload);
+
+    for (const recipientId of recipientIds) {
+      this.server
+        .to(this.buildUserRoom(recipientId))
+        .emit('chat:message-deleted', payload);
+    }
   }
 
   private extractToken(client: AuthenticatedSocket) {

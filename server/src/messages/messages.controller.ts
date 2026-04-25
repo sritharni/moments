@@ -1,14 +1,18 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Inject,
   Param,
   Post,
   Query,
   Request,
   UseGuards,
+  forwardRef,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ChatGateway } from '../chat/chat.gateway';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { GetConversationMessagesDto } from './dto/get-conversation-messages.dto';
 import { MessagesService } from './messages.service';
@@ -16,7 +20,11 @@ import { MessagesService } from './messages.service';
 @UseGuards(JwtAuthGuard)
 @Controller('messages')
 export class MessagesController {
-  constructor(private readonly messagesService: MessagesService) {}
+  constructor(
+    private readonly messagesService: MessagesService,
+    @Inject(forwardRef(() => ChatGateway))
+    private readonly chatGateway: ChatGateway,
+  ) {}
 
   @Post()
   createMessage(
@@ -37,5 +45,15 @@ export class MessagesController {
       conversationId,
       query,
     );
+  }
+
+  @Delete(':id')
+  async deleteMessage(
+    @Request() req: { user: { sub: string } },
+    @Param('id') id: string,
+  ) {
+    const result = await this.messagesService.deleteMessage(req.user.sub, id);
+    await this.chatGateway.broadcastMessageDeleted(result);
+    return { success: true };
   }
 }

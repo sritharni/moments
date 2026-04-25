@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthModule } from '../auth/auth.module';
 import { ConversationsModule } from '../conversations/conversations.module';
@@ -11,12 +11,13 @@ import { ChatPresenceService } from './chat-presence.service';
   imports: [
     AuthModule,
     ConversationsModule,
-    MessagesModule,
+    forwardRef(() => MessagesModule),
     NotificationsModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'change-me-in-production',
     }),
   ],
   providers: [ChatGateway, ChatPresenceService],
+  exports: [ChatGateway],
 })
 export class ChatModule {}
