@@ -1,8 +1,10 @@
 import { AxiosError } from 'axios';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '@/features/auth/context/auth-context';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { startConversation } from '@/features/chat/api/start-conversation';
+import { deleteAccount } from '@/features/users/api/delete-account';
 import { followUser } from '@/features/users/api/follow-user';
 import { getUserPosts } from '@/features/users/api/get-user-posts';
 import { getUserProfile } from '@/features/users/api/get-user-profile';
@@ -13,13 +15,16 @@ import type { UserProfile } from '@/types/user';
 export function ProfilePage() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [postsRestricted, setPostsRestricted] = useState(false);
   const [isFollowPending, setIsFollowPending] = useState(false);
   const [isMessagePending, setIsMessagePending] = useState(false);
+  const [isDeleteAccountPending, setIsDeleteAccountPending] = useState(false);
 
   useEffect(() => {
     if (typeof userId !== 'string') {
@@ -34,14 +39,26 @@ export function ProfilePage() {
       try {
         setIsLoading(true);
         setErrorMessage('');
+        setPostsRestricted(false);
 
-        const [userProfile, userPosts] = await Promise.all([
-          getUserProfile(resolvedUserId),
-          getUserPosts(resolvedUserId),
-        ]);
-
+        const userProfile = await getUserProfile(resolvedUserId);
         setProfile(userProfile);
-        setPosts(userPosts);
+
+        try {
+          const userPosts = await getUserPosts(resolvedUserId);
+          setPosts(userPosts);
+        } catch (error) {
+          if (
+            error instanceof AxiosError &&
+            error.response?.status === 403
+          ) {
+            setPosts([]);
+            setPostsRestricted(true);
+            return;
+          }
+
+          throw error;
+        }
       } catch (error) {
         const message =
           error instanceof AxiosError
@@ -75,11 +92,15 @@ export function ProfilePage() {
               }
             : current,
         );
+        setPosts([]);
+        setPostsRestricted(true);
       } else if (!profile.hasRequestedFollow) {
         await followUser(profile.id);
         setProfile((current) =>
           current ? { ...current, hasRequestedFollow: true } : current,
         );
+        setPosts([]);
+        setPostsRestricted(true);
       }
     } catch (error) {
       const message =
@@ -104,6 +125,32 @@ export function ProfilePage() {
       setErrorMessage('Could not start conversation.');
     } finally {
       setIsMessagePending(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (!profile?.isOwnProfile || isDeleteAccountPending) return;
+
+    const confirmed = window.confirm(
+      'Delete your account permanently? This will remove your profile, posts, comments, likes, messages, and conversations.',
+    );
+
+    if (!confirmed) return;
+
+    setIsDeleteAccountPending(true);
+    setErrorMessage('');
+
+    try {
+      await deleteAccount();
+      logout();
+    } catch (error) {
+      const message =
+        error instanceof AxiosError
+          ? (error.response?.data?.message ?? 'Failed to delete account.')
+          : 'Failed to delete account.';
+
+      setErrorMessage(Array.isArray(message) ? message.join(', ') : message);
+      setIsDeleteAccountPending(false);
     }
   }
 
@@ -197,10 +244,16 @@ export function ProfilePage() {
             </button>
           </div>
         ) : (
-          null
-          // <Link className="action-link" to="/feed">
-          //   Back to feed
-          // </Link>
+          <div className="profile-actions">
+            <button
+              className="delete-account-button"
+              type="button"
+              disabled={isDeleteAccountPending}
+              onClick={() => void handleDeleteAccount()}
+            >
+              {isDeleteAccountPending ? 'Deleting...' : 'Delete account'}
+            </button>
+          </div>
         )}
       </div>
 
@@ -211,8 +264,12 @@ export function ProfilePage() {
 
       {posts.length === 0 ? (
         <div className="info-panel">
-          <h3>No posts yet</h3>
-          <p>This user has not shared any posts yet.</p>
+          <h3>{postsRestricted ? 'Posts are private' : 'No posts yet'}</h3>
+          <p>
+            {postsRestricted
+              ? 'Follow this account to view their posts.'
+              : 'This user has not shared any posts yet.'}
+          </p>
         </div>
       ) : (
         <div className="feed-list">

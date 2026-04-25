@@ -161,6 +161,47 @@ export class UsersService {
     }
   }
 
+  async deleteAccount(userId: string) {
+    await this.ensureUserExists(userId);
+
+    const conversations = await this.prisma.conversation.findMany({
+      where: {
+        participants: {
+          some: { userId },
+        },
+      },
+      select: { id: true },
+    });
+
+    await this.prisma.$transaction([
+      this.prisma.notification.deleteMany({
+        where: {
+          OR: [{ userId }, { actorId: userId }],
+        },
+      }),
+      this.prisma.followRequest.deleteMany({
+        where: {
+          OR: [{ requesterId: userId }, { targetId: userId }],
+        },
+      }),
+      this.prisma.follow.deleteMany({
+        where: {
+          OR: [{ followerId: userId }, { followingId: userId }],
+        },
+      }),
+      ...conversations.map((conversation) =>
+        this.prisma.conversation.delete({
+          where: { id: conversation.id },
+        }),
+      ),
+      this.prisma.user.delete({
+        where: { id: userId },
+      }),
+    ]);
+
+    return { success: true, message: 'Account deleted successfully' };
+  }
+
   async sendFollowRequest(requesterId: string, targetId: string) {
     if (requesterId === targetId) {
       throw new BadRequestException('You cannot follow yourself');

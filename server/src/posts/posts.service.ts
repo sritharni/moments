@@ -50,6 +50,20 @@ export class PostsService {
       throw new NotFoundException('User not found');
     }
 
+    if (userId !== viewerId) {
+      const followRecord = await this.prisma.follow.findFirst({
+        where: {
+          followerId: viewerId,
+          followingId: userId,
+        },
+        select: { id: true },
+      });
+
+      if (!followRecord) {
+        throw new ForbiddenException('Follow this user to view their posts');
+      }
+    }
+
     const posts = await this.prisma.post.findMany({
       where: { authorId: userId },
       orderBy: { createdAt: 'desc' },

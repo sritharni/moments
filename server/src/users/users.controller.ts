@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -39,6 +40,11 @@ export class UsersController {
     @Body() updateProfileDto: UpdateProfileDto,
   ) {
     return this.usersService.updateProfile(req.user.sub, updateProfileDto);
+  }
+
+  @Delete('me')
+  deleteMyAccount(@Request() req: { user: { sub: string } }) {
+    return this.usersService.deleteAccount(req.user.sub);
   }
 
   @Post('follow-requests/:requestId/accept')
