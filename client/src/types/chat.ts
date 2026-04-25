@@ -1,5 +1,6 @@
 export type ChatConversation = {
   id: string;
+  userId: string;
   name: string;
   preview: string;
 };

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ChatComposer } from '@/features/chat/components/chat-composer';
 import { ChatConversationList } from '@/features/chat/components/chat-conversation-list';
 import { ChatMessageList } from '@/features/chat/components/chat-message-list';
@@ -14,6 +14,7 @@ function toUiConversation(conv: ApiConversation, currentUserId: string): ChatCon
   const other = conv.participants.find((p) => p.user.id !== currentUserId);
   return {
     id: conv.id,
+    userId: other?.user.id ?? '',
     name: other?.user.username ?? 'Unknown',
     preview: '',
   };
@@ -118,7 +119,15 @@ export function ChatPage() {
         <header className="chat-panel__header">
           <div>
             <p className="eyebrow">1:1 Chat</p>
-            <h2>{activeConversation?.name ?? 'Select a conversation'}</h2>
+            {activeConversation?.userId ? (
+              <h2>
+                <Link to={`/profile/${activeConversation.userId}`}>
+                  {activeConversation.name}
+                </Link>
+              </h2>
+            ) : (
+              <h2>{activeConversation?.name ?? 'Select a conversation'}</h2>
+            )}
           </div>
         </header>
 

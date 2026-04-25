@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { ChatConversation } from '@/types/chat';
 
 type ChatConversationListProps = {
@@ -35,7 +36,18 @@ export function ChatConversationList({
               {conversation.name.slice(0, 1).toUpperCase()}
             </div>
             <div className="chat-conversation-item__copy">
-              <strong>{conversation.name}</strong>
+              {conversation.userId ? (
+                <strong>
+                  <Link
+                    to={`/profile/${conversation.userId}`}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {conversation.name}
+                  </Link>
+                </strong>
+              ) : (
+                <strong>{conversation.name}</strong>
+              )}
               <span>{conversation.preview}</span>
             </div>
           </button>
