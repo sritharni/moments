@@ -1,7 +1,9 @@
 import { createHash, randomBytes } from 'crypto';
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -11,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { EmailVerificationService } from './email-verification.service';
 
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -20,6 +23,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
+    private readonly emailVerificationService: EmailVerificationService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -66,7 +70,13 @@ export class AuthService {
       throw error;
     }
 
-    return this.buildAuthResponse(user.id, user.email, user.username);
+    await this.emailVerificationService.issueCode(user.id, user.email);
+
+    return {
+      requiresVerification: true,
+      email: user.email,
+      message: 'Account created. Check your email for a 6-digit verification code.',
+    };
   }
 
   async login(loginDto: LoginDto) {
@@ -82,7 +92,42 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (!user.emailVerified) {
+      throw new ForbiddenException({
+        message: 'Email not verified. Please verify your email to continue.',
+        requiresVerification: true,
+        email: user.email,
+      });
+    }
+
     return this.buildAuthResponse(user.id, user.email, user.username);
+  }
+
+  async verifyEmail(email: string, code: string) {
+    const result = await this.emailVerificationService.verifyCode(email, code);
+
+    const user = await this.usersService.findById(result.userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.buildAuthResponse(user.id, user.email, user.username);
+  }
+
+  async resendVerification(email: string) {
+    const user = await this.usersService.findByEmail(email);
+
+    if (!user) {
+      return { success: true };
+    }
+
+    if (user.emailVerified) {
+      return { success: true, alreadyVerified: true };
+    }
+
+    await this.emailVerificationService.issueCode(user.id, user.email);
+    return { success: true };
   }
 
   async refreshAccessToken(rawRefreshToken: string) {

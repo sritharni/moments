@@ -64,6 +64,14 @@ export function LoginPage() {
       setUser(response.user, response.accessToken, response.refreshToken);
       navigate('/feed');
     } catch (error) {
+      if (error instanceof AxiosError) {
+        const data = error.response?.data;
+        if (data?.requiresVerification && data?.email) {
+          navigate(`/verify-email?email=${encodeURIComponent(data.email)}`);
+          return;
+        }
+      }
+
       const message =
         error instanceof AxiosError
           ? (error.response?.data?.message ?? 'Login failed. Please try again.')

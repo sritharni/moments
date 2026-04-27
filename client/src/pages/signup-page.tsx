@@ -31,7 +31,7 @@ const PASSWORD_RULES: PasswordRule[] = [
 
 export function SignupPage() {
   const navigate = useNavigate();
-  const { user, setUser } = useAuth();
+  const { user } = useAuth();
   const [form, setForm] = useState<SignupFormState>(initialState);
 
   useEffect(() => {
@@ -95,9 +95,8 @@ export function SignupPage() {
         password: form.password,
       });
 
-      setUser(response.user, response.accessToken, response.refreshToken);
-      setSuccessMessage('Account created successfully. Redirecting to your feed...');
-      navigate('/feed');
+      setSuccessMessage(response.message);
+      navigate(`/verify-email?email=${encodeURIComponent(response.email)}`);
     } catch (error) {
       const message =
         error instanceof AxiosError

@@ -20,3 +20,14 @@ export type SignupInput = {
   email: string;
   password: string;
 };
+
+export type SignupResponse = {
+  requiresVerification: true;
+  email: string;
+  message: string;
+};
+
+export type VerifyEmailInput = {
+  email: string;
+  code: string;
+};
