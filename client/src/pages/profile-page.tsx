@@ -1,8 +1,10 @@
 import { AxiosError } from 'axios';
 import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/features/auth/context/auth-context';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import { changePassword } from '@/features/auth/api/change-password';
 import { startConversation } from '@/features/chat/api/start-conversation';
 import { deleteAccount } from '@/features/users/api/delete-account';
 import { followUser } from '@/features/users/api/follow-user';
@@ -25,6 +27,15 @@ export function ProfilePage() {
   const [isFollowPending, setIsFollowPending] = useState(false);
   const [isMessagePending, setIsMessagePending] = useState(false);
   const [isDeleteAccountPending, setIsDeleteAccountPending] = useState(false);
+
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState('');
+  const [pwNew, setPwNew] = useState('');
+  const [pwConfirm, setPwConfirm] = useState('');
+  const [pwError, setPwError] = useState('');
+  const [pwInfo, setPwInfo] = useState('');
+  const [pwSubmitting, setPwSubmitting] = useState(false);
+  const [pwNewFocused, setPwNewFocused] = useState(false);
 
   useEffect(() => {
     if (typeof userId !== 'string') {
@@ -154,6 +165,54 @@ export function ProfilePage() {
     }
   }
 
+  async function handleChangePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPwError('');
+    setPwInfo('');
+
+    const rules = [
+      pwNew.length >= 8,
+      /[A-Z]/.test(pwNew),
+      /[a-z]/.test(pwNew),
+      /\d/.test(pwNew),
+      /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?`~]/.test(pwNew),
+    ];
+
+    if (!pwCurrent) {
+      setPwError('Enter your current password.');
+      return;
+    }
+    if (!rules.every(Boolean)) {
+      setPwError('New password does not meet the requirements.');
+      return;
+    }
+    if (pwNew !== pwConfirm) {
+      setPwError('New passwords do not match.');
+      return;
+    }
+    if (pwNew === pwCurrent) {
+      setPwError('New password must be different from the current password.');
+      return;
+    }
+
+    setPwSubmitting(true);
+    try {
+      await changePassword(pwCurrent, pwNew);
+      setPwInfo('Password updated. You will be signed out shortly…');
+      setPwCurrent('');
+      setPwNew('');
+      setPwConfirm('');
+      window.setTimeout(() => logout(), 1200);
+    } catch (error) {
+      const message =
+        error instanceof AxiosError
+          ? (error.response?.data?.message ?? 'Could not update password.')
+          : 'Could not update password.';
+      setPwError(Array.isArray(message) ? message.join(', ') : message);
+      setPwSubmitting(false);
+    }
+  }
+
   function followButtonLabel() {
     if (isFollowPending) return 'Updating...';
     if (profile?.isFollowing) return 'Unfollow';
@@ -256,6 +315,116 @@ export function ProfilePage() {
           </div>
         )}
       </div>
+
+      {profile.isOwnProfile ? (
+        <div className="profile-password-section">
+          <div className="section-heading">
+            <p className="eyebrow">Account</p>
+            <h2>Change password</h2>
+          </div>
+
+          {!showChangePassword ? (
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => {
+                setShowChangePassword(true);
+                setPwError('');
+                setPwInfo('');
+              }}
+            >
+              Change password
+            </button>
+          ) : (
+            <form className="auth-form" onSubmit={handleChangePassword} noValidate>
+              <div className="form-field">
+                <label htmlFor="pw-current">Current password</label>
+                <input
+                  id="pw-current"
+                  type="password"
+                  value={pwCurrent}
+                  onChange={(event) => setPwCurrent(event.target.value)}
+                  autoComplete="current-password"
+                />
+              </div>
+
+              <div className="form-field">
+                <label htmlFor="pw-new">New password</label>
+                <input
+                  id="pw-new"
+                  type="password"
+                  value={pwNew}
+                  onChange={(event) => setPwNew(event.target.value)}
+                  onFocus={() => setPwNewFocused(true)}
+                  onBlur={() => setPwNewFocused(false)}
+                  autoComplete="new-password"
+                />
+                {(pwNewFocused || pwNew.length > 0) && (
+                  <ul className="password-rules">
+                    {[
+                      { label: 'At least 8 characters', passed: pwNew.length >= 8 },
+                      { label: 'At least 1 uppercase letter', passed: /[A-Z]/.test(pwNew) },
+                      { label: 'At least 1 lowercase letter', passed: /[a-z]/.test(pwNew) },
+                      { label: 'At least 1 number', passed: /\d/.test(pwNew) },
+                      {
+                        label: 'At least 1 special character',
+                        passed: /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?`~]/.test(pwNew),
+                      },
+                    ].map((rule) => (
+                      <li
+                        key={rule.label}
+                        className={`password-rule ${rule.passed ? 'password-rule--pass' : 'password-rule--fail'}`}
+                      >
+                        <span className="password-rule__icon">{rule.passed ? '✓' : '✗'}</span>
+                        {rule.label}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="form-field">
+                <label htmlFor="pw-confirm">Confirm new password</label>
+                <input
+                  id="pw-confirm"
+                  type="password"
+                  value={pwConfirm}
+                  onChange={(event) => setPwConfirm(event.target.value)}
+                  autoComplete="new-password"
+                />
+              </div>
+
+              {pwError ? (
+                <div className="status-banner status-banner--error">{pwError}</div>
+              ) : null}
+              {pwInfo ? (
+                <div className="status-banner status-banner--success">{pwInfo}</div>
+              ) : null}
+
+              <div className="form-actions">
+                <button className="submit-button" type="submit" disabled={pwSubmitting}>
+                  {pwSubmitting ? 'Updating...' : 'Update password'}
+                </button>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  disabled={pwSubmitting}
+                  onClick={() => {
+                    setShowChangePassword(false);
+                    setPwCurrent('');
+                    setPwNew('');
+                    setPwConfirm('');
+                    setPwError('');
+                    setPwInfo('');
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      ) : null}
 
       <div className="section-heading profile-posts-heading">
         <p className="eyebrow">Posts</p>

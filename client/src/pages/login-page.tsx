@@ -1,7 +1,7 @@
 import { AxiosError } from 'axios';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { login } from '@/features/auth/api/login';
 import { useAuth } from '@/features/auth/context/auth-context';
 
@@ -137,6 +137,7 @@ export function LoginPage() {
               <button className="submit-button" type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Logging in...' : 'Log in'}
               </button>
+              <Link to="/forgot-password">Forgot password?</Link>
               {/* <Link to="/signup">Need an account? Create one</Link> */}
               {/* <span>
                 Need an account?{" "}

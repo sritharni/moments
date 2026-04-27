@@ -14,6 +14,7 @@ import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { EmailVerificationService } from './email-verification.service';
+import { PasswordResetService } from './password-reset.service';
 
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -24,6 +25,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
     private readonly emailVerificationService: EmailVerificationService,
+    private readonly passwordResetService: PasswordResetService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -113,6 +115,54 @@ export class AuthService {
     }
 
     return this.buildAuthResponse(user.id, user.email, user.username);
+  }
+
+  async forgotPassword(email: string) {
+    await this.passwordResetService.requestReset(email);
+    return { success: true };
+  }
+
+  async resetPassword(token: string, password: string) {
+    await this.passwordResetService.resetPassword(token, password);
+    return { success: true };
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, password: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const matches = await bcrypt.compare(currentPassword, user.password);
+    if (!matches) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    if (currentPassword === newPassword) {
+      throw new UnauthorizedException(
+        'New password must be different from the current password',
+      );
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { password: newHash },
+      }),
+      this.prisma.refreshToken.deleteMany({ where: { userId } }),
+    ]);
+
+    return { success: true };
   }
 
   async resendVerification(email: string) {
