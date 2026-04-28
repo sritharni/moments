@@ -50,6 +50,7 @@ export function ChatPage() {
   const [activeConversationId, setActiveConversationId] = useState(initialConversationId);
   const [composerValue, setComposerValue] = useState('');
   const [deletingConversationId, setDeletingConversationId] = useState('');
+  const [removingConversationIds, setRemovingConversationIds] = useState<string[]>([]);
 
   const { messages, loading, sendMessage, deleteMessage } = useChat(
     activeConversationId || null,
@@ -78,8 +79,12 @@ export function ChatPage() {
 
   async function handleDeleteConversation(conversationId: string) {
     setDeletingConversationId(conversationId);
+    setRemovingConversationIds((current) =>
+      current.includes(conversationId) ? current : [...current, conversationId],
+    );
 
     try {
+      await new Promise((resolve) => window.setTimeout(resolve, 240));
       await deleteConversation(conversationId);
       setConversations((current) => {
         const next = current.filter((conversation) => conversation.id !== conversationId);
@@ -92,8 +97,14 @@ export function ChatPage() {
       });
     } catch {
       // Keep the current UI state if deletion fails.
+      setRemovingConversationIds((current) =>
+        current.filter((id) => id !== conversationId),
+      );
     } finally {
       setDeletingConversationId('');
+      setRemovingConversationIds((current) =>
+        current.filter((id) => id !== conversationId),
+      );
     }
   }
 
@@ -114,10 +125,11 @@ export function ChatPage() {
           onSelect={setActiveConversationId}
           onDelete={handleDeleteConversation}
           deletingConversationId={deletingConversationId}
+          removingConversationIds={removingConversationIds}
         />
       </aside>
 
-      <div className="chat-panel">
+      <div className="chat-panel" key={activeConversationId || 'empty-chat'}>
         <header className="chat-panel__header">
           <div>
             <p className="eyebrow">1:1 Chat</p>

@@ -65,6 +65,8 @@ export function ChatMessageList({
             key={message.id}
             className={`chat-bubble-row${
               isOwnMessage ? ' chat-bubble-row--self' : ''
+            }${
+              isOwnMessage ? ' chat-bubble-row--outgoing' : ' chat-bubble-row--incoming'
             }`}
           >
             <div

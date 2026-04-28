@@ -126,10 +126,10 @@ export function SignupPage() {
         <h2>Create your account</h2>
       </div>
 
-      <div className="auth-grid">
+      <div className="auth-grid auth-grid--cinematic">
         <div>
           <form className="auth-form" onSubmit={handleSubmit} noValidate>
-            <div className="form-field">
+            <div className={`form-field${errors.username ? ' form-field--error' : ''}`}>
               <label htmlFor="signup-username">Username</label>
               <input
                 id="signup-username"
@@ -146,7 +146,7 @@ export function SignupPage() {
               ) : null}
             </div>
 
-            <div className="form-field">
+            <div className={`form-field${errors.email ? ' form-field--error' : ''}`}>
               <label htmlFor="signup-email">Email</label>
               <input
                 id="signup-email"
@@ -161,7 +161,7 @@ export function SignupPage() {
               {errors.email ? <span className="field-error">{errors.email}</span> : null}
             </div>
 
-            <div className="form-field">
+            <div className={`form-field${errors.password ? ' form-field--error' : ''}`}>
               <label htmlFor="signup-password">Password</label>
               <input
                 id="signup-password"

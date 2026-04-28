@@ -1,12 +1,10 @@
 import { AxiosError } from 'axios';
 import { useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/features/auth/context/auth-context';
+import { deletePost } from '@/features/posts/api/delete-post';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
-import { changePassword } from '@/features/auth/api/change-password';
 import { startConversation } from '@/features/chat/api/start-conversation';
-import { deleteAccount } from '@/features/users/api/delete-account';
 import { followUser } from '@/features/users/api/follow-user';
 import { getUserPosts } from '@/features/users/api/get-user-posts';
 import { getUserProfile } from '@/features/users/api/get-user-profile';
@@ -17,7 +15,7 @@ import type { UserProfile } from '@/types/user';
 export function ProfilePage() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user } = useAuth();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -26,16 +24,7 @@ export function ProfilePage() {
   const [postsRestricted, setPostsRestricted] = useState(false);
   const [isFollowPending, setIsFollowPending] = useState(false);
   const [isMessagePending, setIsMessagePending] = useState(false);
-  const [isDeleteAccountPending, setIsDeleteAccountPending] = useState(false);
-
-  const [showChangePassword, setShowChangePassword] = useState(false);
-  const [pwCurrent, setPwCurrent] = useState('');
-  const [pwNew, setPwNew] = useState('');
-  const [pwConfirm, setPwConfirm] = useState('');
-  const [pwError, setPwError] = useState('');
-  const [pwInfo, setPwInfo] = useState('');
-  const [pwSubmitting, setPwSubmitting] = useState(false);
-  const [pwNewFocused, setPwNewFocused] = useState(false);
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof userId !== 'string') {
@@ -139,77 +128,36 @@ export function ProfilePage() {
     }
   }
 
-  async function handleDeleteAccount() {
-    if (!profile?.isOwnProfile || isDeleteAccountPending) return;
+  async function handleDeletePost(post: Post) {
+    if (deletingPostId === post.id) return;
 
-    const confirmed = window.confirm(
-      'Delete your account permanently? This will remove your profile, posts, comments, likes, messages, and conversations.',
-    );
-
+    const confirmed = window.confirm('Delete this post permanently?');
     if (!confirmed) return;
 
-    setIsDeleteAccountPending(true);
-    setErrorMessage('');
-
     try {
-      await deleteAccount();
-      logout();
+      setDeletingPostId(post.id);
+      setErrorMessage('');
+      await deletePost(post.id);
+      setPosts((current) => current.filter((currentPost) => currentPost.id !== post.id));
+      setProfile((current) =>
+        current
+          ? {
+              ...current,
+              _count: {
+                ...current._count,
+                posts: Math.max(0, current._count.posts - 1),
+              },
+            }
+          : current,
+      );
     } catch (error) {
       const message =
         error instanceof AxiosError
-          ? (error.response?.data?.message ?? 'Failed to delete account.')
-          : 'Failed to delete account.';
-
+          ? (error.response?.data?.message ?? 'Failed to delete post.')
+          : 'Failed to delete post.';
       setErrorMessage(Array.isArray(message) ? message.join(', ') : message);
-      setIsDeleteAccountPending(false);
-    }
-  }
-
-  async function handleChangePassword(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPwError('');
-    setPwInfo('');
-
-    const rules = [
-      pwNew.length >= 8,
-      /[A-Z]/.test(pwNew),
-      /[a-z]/.test(pwNew),
-      /\d/.test(pwNew),
-      /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?`~]/.test(pwNew),
-    ];
-
-    if (!pwCurrent) {
-      setPwError('Enter your current password.');
-      return;
-    }
-    if (!rules.every(Boolean)) {
-      setPwError('New password does not meet the requirements.');
-      return;
-    }
-    if (pwNew !== pwConfirm) {
-      setPwError('New passwords do not match.');
-      return;
-    }
-    if (pwNew === pwCurrent) {
-      setPwError('New password must be different from the current password.');
-      return;
-    }
-
-    setPwSubmitting(true);
-    try {
-      await changePassword(pwCurrent, pwNew);
-      setPwInfo('Password updated. You will be signed out shortly…');
-      setPwCurrent('');
-      setPwNew('');
-      setPwConfirm('');
-      window.setTimeout(() => logout(), 1200);
-    } catch (error) {
-      const message =
-        error instanceof AxiosError
-          ? (error.response?.data?.message ?? 'Could not update password.')
-          : 'Could not update password.';
-      setPwError(Array.isArray(message) ? message.join(', ') : message);
-      setPwSubmitting(false);
+    } finally {
+      setDeletingPostId(null);
     }
   }
 
@@ -251,12 +199,17 @@ export function ProfilePage() {
 
       <div className="profile-card">
         <div className="profile-card__main">
-          <div className="profile-avatar">
-            {profile.profileImage ? (
-              <img src={profile.profileImage} alt={`${profile.username} avatar`} />
-            ) : (
-              <span>{profile.username.slice(0, 1).toUpperCase()}</span>
-            )}
+          <div className="profile-avatar-wrap">
+            <div className="profile-avatar">
+              {profile.profileImage ? (
+                <img
+                  src={resolveMediaUrl(profile.profileImage)}
+                  alt={`${profile.username} avatar`}
+                />
+              ) : (
+                <span>{profile.username.slice(0, 1).toUpperCase()}</span>
+              )}
+            </div>
           </div>
 
           <div className="profile-copy">
@@ -285,7 +238,9 @@ export function ProfilePage() {
         {!profile.isOwnProfile ? (
           <div className="profile-actions">
             <button
-              className={`follow-button${profile.isFollowing ? ' follow-button--active' : ''}${profile.hasRequestedFollow ? ' follow-button--requested' : ''}`}
+              className={`follow-button${profile.isFollowing ? ' follow-button--active' : ''}${profile.hasRequestedFollow ? ' follow-button--requested' : ''}${
+                isFollowPending ? ' follow-button--transitioning' : ''
+              }`}
               type="button"
               disabled={isFollowPending || profile.hasRequestedFollow}
               aria-busy={isFollowPending}
@@ -302,129 +257,8 @@ export function ProfilePage() {
               {isMessagePending ? 'Opening...' : 'Send message'}
             </button>
           </div>
-        ) : (
-          <div className="profile-actions">
-            <button
-              className="delete-account-button"
-              type="button"
-              disabled={isDeleteAccountPending}
-              onClick={() => void handleDeleteAccount()}
-            >
-              {isDeleteAccountPending ? 'Deleting...' : 'Delete account'}
-            </button>
-          </div>
-        )}
+        ) : null}
       </div>
-
-      {profile.isOwnProfile ? (
-        <div className="profile-password-section">
-          <div className="section-heading">
-            <p className="eyebrow">Account</p>
-            <h2>Change password</h2>
-          </div>
-
-          {!showChangePassword ? (
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={() => {
-                setShowChangePassword(true);
-                setPwError('');
-                setPwInfo('');
-              }}
-            >
-              Change password
-            </button>
-          ) : (
-            <form className="auth-form" onSubmit={handleChangePassword} noValidate>
-              <div className="form-field">
-                <label htmlFor="pw-current">Current password</label>
-                <input
-                  id="pw-current"
-                  type="password"
-                  value={pwCurrent}
-                  onChange={(event) => setPwCurrent(event.target.value)}
-                  autoComplete="current-password"
-                />
-              </div>
-
-              <div className="form-field">
-                <label htmlFor="pw-new">New password</label>
-                <input
-                  id="pw-new"
-                  type="password"
-                  value={pwNew}
-                  onChange={(event) => setPwNew(event.target.value)}
-                  onFocus={() => setPwNewFocused(true)}
-                  onBlur={() => setPwNewFocused(false)}
-                  autoComplete="new-password"
-                />
-                {(pwNewFocused || pwNew.length > 0) && (
-                  <ul className="password-rules">
-                    {[
-                      { label: 'At least 8 characters', passed: pwNew.length >= 8 },
-                      { label: 'At least 1 uppercase letter', passed: /[A-Z]/.test(pwNew) },
-                      { label: 'At least 1 lowercase letter', passed: /[a-z]/.test(pwNew) },
-                      { label: 'At least 1 number', passed: /\d/.test(pwNew) },
-                      {
-                        label: 'At least 1 special character',
-                        passed: /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?`~]/.test(pwNew),
-                      },
-                    ].map((rule) => (
-                      <li
-                        key={rule.label}
-                        className={`password-rule ${rule.passed ? 'password-rule--pass' : 'password-rule--fail'}`}
-                      >
-                        <span className="password-rule__icon">{rule.passed ? '✓' : '✗'}</span>
-                        {rule.label}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <div className="form-field">
-                <label htmlFor="pw-confirm">Confirm new password</label>
-                <input
-                  id="pw-confirm"
-                  type="password"
-                  value={pwConfirm}
-                  onChange={(event) => setPwConfirm(event.target.value)}
-                  autoComplete="new-password"
-                />
-              </div>
-
-              {pwError ? (
-                <div className="status-banner status-banner--error">{pwError}</div>
-              ) : null}
-              {pwInfo ? (
-                <div className="status-banner status-banner--success">{pwInfo}</div>
-              ) : null}
-
-              <div className="form-actions">
-                <button className="submit-button" type="submit" disabled={pwSubmitting}>
-                  {pwSubmitting ? 'Updating...' : 'Update password'}
-                </button>
-                <button
-                  type="button"
-                  className="ghost-button"
-                  disabled={pwSubmitting}
-                  onClick={() => {
-                    setShowChangePassword(false);
-                    setPwCurrent('');
-                    setPwNew('');
-                    setPwConfirm('');
-                    setPwError('');
-                    setPwInfo('');
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      ) : null}
 
       <div className="section-heading profile-posts-heading">
         <p className="eyebrow">Posts</p>
@@ -451,6 +285,27 @@ export function ProfilePage() {
                     {new Date(post.createdAt).toLocaleString()}
                   </p>
                 </div>
+                {user?.id === post.author.id ? (
+                  <button
+                    className="feed-card__delete"
+                    type="button"
+                    aria-label="Delete post"
+                    title="Delete post"
+                    disabled={deletingPostId === post.id}
+                    onClick={() => void handleDeletePost(post)}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M9 3.75h6m-9 3h12m-9.75 0v11.25a1.5 1.5 0 0 0 1.5 1.5h4.5a1.5 1.5 0 0 0 1.5-1.5V6.75M10.5 10.5v5.25m3-5.25v5.25"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.8"
+                      />
+                    </svg>
+                  </button>
+                ) : null}
               </header>
 
               <p className="feed-card__content">{post.content}</p>

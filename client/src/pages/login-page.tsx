@@ -89,7 +89,7 @@ export function LoginPage() {
         <h2>Log in to your account</h2>
       </div>
 
-      <div className="auth-grid">
+      <div className="auth-grid auth-grid--cinematic">
         <div>
           {/* <p className="body-copy">
             Sign in with your email and password. On success, the JWT is saved
@@ -97,7 +97,7 @@ export function LoginPage() {
           </p> */}
 
           <form className="auth-form" onSubmit={handleSubmit} noValidate>
-            <div className="form-field">
+            <div className={`form-field${errors.email ? ' form-field--error' : ''}`}>
               <label htmlFor="login-email">Email</label>
               <input
                 id="login-email"
@@ -112,7 +112,7 @@ export function LoginPage() {
               {errors.email ? <span className="field-error">{errors.email}</span> : null}
             </div>
 
-            <div className="form-field">
+            <div className={`form-field${errors.password ? ' form-field--error' : ''}`}>
               <label htmlFor="login-password">Password</label>
               <input
                 id="login-password"

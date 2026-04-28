@@ -11,6 +11,7 @@ import { NotFoundPage } from '@/pages/not-found-page';
 import { NotificationsPage } from '@/pages/notifications-page';
 import { ProfilePage } from '@/pages/profile-page';
 import { SearchPage } from '@/pages/search-page';
+import { SettingsPage } from '@/pages/settings-page';
 import { SignupPage } from '@/pages/signup-page';
 import { VerifyEmailPage } from '@/pages/verify-email-page';
 
@@ -63,6 +64,10 @@ export const router = createBrowserRouter([
           {
             path: 'profile/:userId',
             element: <ProfilePage />,
+          },
+          {
+            path: 'settings',
+            element: <SettingsPage />,
           },
           {
             path: 'search',

@@ -22,6 +22,8 @@ export function PostComments({ postId, commentCount, onCommentCountChange }: Pro
   const [newText, setNewText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [pendingLike, setPendingLike] = useState<string | null>(null);
+  const [freshCommentId, setFreshCommentId] = useState<string | null>(null);
+  const [justLikedCommentId, setJustLikedCommentId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -53,6 +55,8 @@ export function PostComments({ postId, commentCount, onCommentCountChange }: Pro
         ...prev,
         { ...comment, isLiked: false, _count: { commentLikes: 0 } },
       ]);
+      setFreshCommentId(comment.id);
+      window.setTimeout(() => setFreshCommentId(null), 720);
       onCommentCountChange(1);
       setNewText('');
     } catch (err) {
@@ -94,6 +98,10 @@ export function PostComments({ postId, commentCount, onCommentCountChange }: Pro
             : c,
         ),
       );
+      if (!isLiked) {
+        setJustLikedCommentId(commentId);
+        window.setTimeout(() => setJustLikedCommentId(null), 620);
+      }
     } catch (err) {
       const msg =
         err instanceof AxiosError
@@ -116,7 +124,7 @@ export function PostComments({ postId, commentCount, onCommentCountChange }: Pro
       </button>
 
       {open && (
-        <div className="comments-section">
+        <div className="comments-section comments-section--open">
           {error ? <p className="comments-error">{error}</p> : null}
 
           {!loaded ? (
@@ -126,7 +134,12 @@ export function PostComments({ postId, commentCount, onCommentCountChange }: Pro
           ) : (
             <ul className="comments-list">
               {comments.map((comment) => (
-                <li className="comment-item" key={comment.id}>
+                <li
+                  className={`comment-item${
+                    freshCommentId === comment.id ? ' comment-item--fresh' : ''
+                  }`}
+                  key={comment.id}
+                >
                   <div className="comment-item__header">
                     <span className="comment-item__author">@{comment.user.username}</span>
                     <span className="comment-item__date">
@@ -136,7 +149,9 @@ export function PostComments({ postId, commentCount, onCommentCountChange }: Pro
                   <p className="comment-item__content">{comment.content}</p>
                   <div className="comment-item__actions">
                     <button
-                      className={`comment-like-btn${comment.isLiked ? ' comment-like-btn--active' : ''}`}
+                      className={`comment-like-btn${comment.isLiked ? ' comment-like-btn--active' : ''}${
+                        justLikedCommentId === comment.id ? ' comment-like-btn--burst' : ''
+                      }`}
                       type="button"
                       disabled={pendingLike === comment.id}
                       onClick={() => void handleCommentLike(comment.id, comment.isLiked)}

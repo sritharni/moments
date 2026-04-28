@@ -7,6 +7,7 @@ type ChatConversationListProps = {
   onSelect: (conversationId: string) => void;
   onDelete: (conversationId: string) => void;
   deletingConversationId: string;
+  removingConversationIds: string[];
 };
 
 export function ChatConversationList({
@@ -15,6 +16,7 @@ export function ChatConversationList({
   onSelect,
   onDelete,
   deletingConversationId,
+  removingConversationIds,
 }: ChatConversationListProps) {
   return (
     <div className="chat-sidebar__list">
@@ -24,6 +26,10 @@ export function ChatConversationList({
           className={`chat-conversation-item${
             conversation.id === activeConversationId
               ? ' chat-conversation-item--active'
+              : ''
+          }${
+            removingConversationIds.includes(conversation.id)
+              ? ' chat-conversation-item--removing'
               : ''
           }`}
         >

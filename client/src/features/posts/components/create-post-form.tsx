@@ -21,6 +21,7 @@ export function CreatePostForm({ onPostCreated }: CreatePostFormProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fileError, setFileError] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isPreviewFresh, setIsPreviewFresh] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -35,12 +36,14 @@ export function CreatePostForm({ onPostCreated }: CreatePostFormProps) {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
+    setIsPreviewFresh(true);
   }
 
   function removeImage() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setSelectedFile(null);
     setPreviewUrl(null);
+    setIsPreviewFresh(false);
     setFileError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
@@ -122,7 +125,9 @@ export function CreatePostForm({ onPostCreated }: CreatePostFormProps) {
           <label>Image (optional)</label>
 
           {previewUrl ? (
-            <div className="image-preview">
+            <div
+              className={`image-preview${isPreviewFresh ? ' image-preview--fresh' : ''}`}
+            >
               <img src={previewUrl} alt="Preview" className="image-preview__img" />
               <button
                 type="button"
