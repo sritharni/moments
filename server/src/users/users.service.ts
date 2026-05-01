@@ -12,6 +12,7 @@ type CreateUserInput = {
   username: string;
   email: string;
   password: string;
+  emailVerified?: boolean;
 };
 
 @Injectable()
@@ -27,6 +28,7 @@ export class UsersService {
         username: data.username,
         email: data.email.toLowerCase(),
         password: data.password,
+        emailVerified: data.emailVerified ?? true,
       },
     });
   }

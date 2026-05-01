@@ -1,9 +1,7 @@
 import { createHash, randomBytes } from 'crypto';
 import {
   ConflictException,
-  ForbiddenException,
   Injectable,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -13,7 +11,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { EmailVerificationService } from './email-verification.service';
 import { PasswordResetService } from './password-reset.service';
 
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -24,7 +21,6 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
-    private readonly emailVerificationService: EmailVerificationService,
     private readonly passwordResetService: PasswordResetService,
   ) {}
 
@@ -52,6 +48,7 @@ export class AuthService {
         username: registerDto.username,
         email: registerDto.email,
         password: passwordHash,
+        emailVerified: true,
       });
     } catch (error) {
       if (
@@ -72,13 +69,7 @@ export class AuthService {
       throw error;
     }
 
-    await this.emailVerificationService.issueCode(user.id, user.email);
-
-    return {
-      requiresVerification: true,
-      email: user.email,
-      message: 'Account created. Check your email for a 6-digit verification code.',
-    };
+    return this.buildAuthResponse(user.id, user.email, user.username);
   }
 
   async login(loginDto: LoginDto) {
@@ -92,26 +83,6 @@ export class AuthService {
 
     if (!passwordMatches) {
       throw new UnauthorizedException('Invalid credentials');
-    }
-
-    if (!user.emailVerified) {
-      throw new ForbiddenException({
-        message: 'Email not verified. Please verify your email to continue.',
-        requiresVerification: true,
-        email: user.email,
-      });
-    }
-
-    return this.buildAuthResponse(user.id, user.email, user.username);
-  }
-
-  async verifyEmail(email: string, code: string) {
-    const result = await this.emailVerificationService.verifyCode(email, code);
-
-    const user = await this.usersService.findById(result.userId);
-
-    if (!user) {
-      throw new NotFoundException('User not found');
     }
 
     return this.buildAuthResponse(user.id, user.email, user.username);
@@ -162,21 +133,6 @@ export class AuthService {
       this.prisma.refreshToken.deleteMany({ where: { userId } }),
     ]);
 
-    return { success: true };
-  }
-
-  async resendVerification(email: string) {
-    const user = await this.usersService.findByEmail(email);
-
-    if (!user) {
-      return { success: true };
-    }
-
-    if (user.emailVerified) {
-      return { success: true, alreadyVerified: true };
-    }
-
-    await this.emailVerificationService.issueCode(user.id, user.email);
     return { success: true };
   }
 

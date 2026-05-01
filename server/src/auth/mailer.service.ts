@@ -16,11 +16,11 @@ export class MailerService implements OnModuleInit {
   private fromAddress = '';
 
   async onModuleInit() {
-    const host = process.env.SMTP_HOST;
-    const port = process.env.SMTP_PORT;
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
-    const from = process.env.SMTP_FROM ?? user;
+    const host = process.env.SMTP_HOST?.trim();
+    const port = process.env.SMTP_PORT?.trim();
+    const user = process.env.SMTP_USER?.trim();
+    const pass = process.env.SMTP_PASS?.trim();
+    const from = process.env.SMTP_FROM?.trim() ?? user;
 
     if (!host || !port || !user || !pass || !from) {
       this.logger.warn(
@@ -29,22 +29,40 @@ export class MailerService implements OnModuleInit {
       return;
     }
 
+    const portNumber = Number(port);
+    const secure = portNumber === 465;
+    const isGmail = /gmail\.com$/i.test(host);
+
     this.transporter = nodemailer.createTransport({
       host,
-      port: Number(port),
-      secure: Number(port) === 465,
+      port: portNumber,
+      secure,
+      requireTLS: !secure,
       auth: { user, pass },
+      tls: {
+        servername: host,
+        minVersion: 'TLSv1.2',
+        rejectUnauthorized: true,
+      },
+      ...(isGmail ? { service: 'gmail' } : {}),
     });
     this.fromAddress = from;
 
     try {
       await this.transporter.verify();
-      this.logger.log(`SMTP transport ready (host=${host}, from=${from})`);
+      this.logger.log(
+        `SMTP transport ready (host=${host}, port=${portNumber}, from=${from})`,
+      );
     } catch (error) {
       this.transporter = null;
       this.logger.error(
         `SMTP verification failed; falling back to console logging. ${error instanceof Error ? error.message : ''}`,
       );
+      if (isGmail) {
+        this.logger.warn(
+          'For Gmail, use an app password from a 2FA-enabled account. Regular account passwords will not work.',
+        );
+      }
     }
   }
 

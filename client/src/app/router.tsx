@@ -13,7 +13,6 @@ import { ProfilePage } from '@/pages/profile-page';
 import { SearchPage } from '@/pages/search-page';
 import { SettingsPage } from '@/pages/settings-page';
 import { SignupPage } from '@/pages/signup-page';
-import { VerifyEmailPage } from '@/pages/verify-email-page';
 
 export const router = createBrowserRouter([
   {
@@ -35,10 +34,6 @@ export const router = createBrowserRouter([
           {
             path: 'signup',
             element: <SignupPage />,
-          },
-          {
-            path: 'verify-email',
-            element: <VerifyEmailPage />,
           },
           {
             path: 'forgot-password',

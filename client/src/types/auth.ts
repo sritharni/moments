@@ -22,12 +22,7 @@ export type SignupInput = {
 };
 
 export type SignupResponse = {
-  requiresVerification: true;
-  email: string;
-  message: string;
-};
-
-export type VerifyEmailInput = {
-  email: string;
-  code: string;
+  accessToken: string;
+  refreshToken: string;
+  user: AuthUser;
 };

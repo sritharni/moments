@@ -31,7 +31,7 @@ const PASSWORD_RULES: PasswordRule[] = [
 
 export function SignupPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [form, setForm] = useState<SignupFormState>(initialState);
 
   useEffect(() => {
@@ -40,7 +40,6 @@ export function SignupPage() {
 
   const [errors, setErrors] = useState<SignupErrors>({});
   const [serverError, setServerError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
 
@@ -80,7 +79,6 @@ export function SignupPage() {
     const nextErrors = validate(form);
     setErrors(nextErrors);
     setServerError('');
-    setSuccessMessage('');
 
     if (Object.keys(nextErrors).length > 0) {
       return;
@@ -94,9 +92,8 @@ export function SignupPage() {
         email: form.email.trim(),
         password: form.password,
       });
-
-      setSuccessMessage(response.message);
-      navigate(`/verify-email?email=${encodeURIComponent(response.email)}`);
+      setUser(response.user, response.accessToken, response.refreshToken);
+      navigate('/feed');
     } catch (error) {
       const message =
         error instanceof AxiosError
@@ -196,9 +193,6 @@ export function SignupPage() {
 
             {serverError ? (
               <div className="status-banner status-banner--error">{serverError}</div>
-            ) : null}
-            {successMessage ? (
-              <div className="status-banner status-banner--success">{successMessage}</div>
             ) : null}
 
             <div className="form-actions">
